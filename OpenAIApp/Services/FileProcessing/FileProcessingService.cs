@@ -93,7 +93,7 @@ namespace OpenAIApp.Services.FileProcessing
 
             await UpdateState(file, FileState.PROCESSING);
 
-            var fileText = await PdfHelper.GetTextAsync(file.Url, 1);
+            var fileText = await PdfHelper.GetTextAsync(file.Url);
 
             if (string.IsNullOrWhiteSpace(fileText))
             {
