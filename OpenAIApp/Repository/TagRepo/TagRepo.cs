@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using OpenAIApp.Models;
+﻿using OpenAIApp.Models;
 using Supabase;
 
 namespace OpenAIApp.Repository.TagRepo
@@ -43,6 +39,12 @@ namespace OpenAIApp.Repository.TagRepo
         public async Task DeleteTagAsync(Guid id)
         {
             await _supabaseClient.From<Tag>().Delete();
+        }
+
+        public async Task<Tag> GetTagByNameAsync(string name)
+        {
+            var response = await _supabaseClient.From<Tag>().Where(x => x.Name == name).Get();
+            return response.Model;
         }
     }
 }

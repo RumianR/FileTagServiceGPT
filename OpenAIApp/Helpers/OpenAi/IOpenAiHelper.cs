@@ -2,7 +2,6 @@
 {
     public interface IOpenAiHelper
     {
-
         Task<string> GetTags(string text);
     }
 }

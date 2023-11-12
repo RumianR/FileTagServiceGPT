@@ -134,9 +134,15 @@ namespace OpenAIApp.Services.FileProcessing
 
             tagModels.ForEach(async tag =>
             {
-                var createdTag = await _tagRepo.CreateTagAsync(tag);
+                var existingTag = await _tagRepo.GetTagByNameAsync(tag.Name);
+
+                if (existingTag == null)
+                {
+                    existingTag = await _tagRepo.CreateTagAsync(tag);
+                }
+
                 await _fileTagRepo.CreateFileTagAsync(
-                    new FileTag { FileId = file.Id, TagId = createdTag.Id }
+                    new FileTag { FileId = file.Id, TagId = existingTag.Id }
                 );
             });
 

@@ -1,8 +1,6 @@
-﻿using Microsoft.Extensions.Options;
-using OpenAI_API.Chat;
+﻿using OpenAI_API.Chat;
 using OpenAI_API.Models;
 using OpenAIApp.Configurations;
-using Supabase;
 
 namespace OpenAIApp.Helpers.OpenAi
 {
@@ -21,7 +19,6 @@ namespace OpenAIApp.Helpers.OpenAi
         {
             _openAiConfig = openAiConfig;
         }
-
 
         public async Task<string> GetTags(string text)
         {
