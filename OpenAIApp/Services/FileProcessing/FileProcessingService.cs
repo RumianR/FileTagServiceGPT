@@ -64,7 +64,15 @@ namespace OpenAIApp.Services.FileProcessing
             while (_fileProcessingQueue.Count > 0)
             {
                 string fileId = _fileProcessingQueue.Dequeue();
-                await ProcessFile(fileId);
+
+                try
+                {
+                    await ProcessFile(fileId);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug($"Could not process file: {fileId}", e);
+                }
             }
 
             _timer.Change(
