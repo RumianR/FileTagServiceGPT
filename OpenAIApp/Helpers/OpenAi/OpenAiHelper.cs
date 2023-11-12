@@ -11,13 +11,14 @@ namespace OpenAIApp.Helpers.OpenAi
         private readonly OpenAiConfig _openAiConfig;
 
         private readonly string _queryBase =
-            "Return me in JSON format, and it absolutely must be in JSON, " +
+            "Return me in JSON format, and it absolutely must be in JSON, "
+            +
             //"If you can't reply json, " +
             //"just reply with -1 so I can consider this is an error." +
-            "a list of items called tags that can categorize the text with the top 50 more meaningful classifiers." +
-            "This text is from a pdf document or a mail letter and the purpose is to have helpful keywords/tags that are meaningful " +
-            "to associate this document in a bin." +
-            "Here is the document text: ";
+            "a list of items called tags that can categorize the text with the top 50 more meaningful classifiers."
+            + "This text is from a pdf document or a mail letter and the purpose is to have helpful keywords/tags that are meaningful "
+            + "to associate this document in a bin."
+            + "Here is the document text: ";
 
         public OpenAiHelper(OpenAiConfig openAiConfig)
         {
@@ -44,7 +45,8 @@ namespace OpenAIApp.Helpers.OpenAi
                     Temperature = 0.1,
                     //MaxTokens = 50,
                     Messages = new ChatMessage[] { new ChatMessage(ChatMessageRole.User, text) }
-                });
+                }
+            );
 
             return results.Choices[0].Message.Content;
         }
@@ -63,7 +65,10 @@ namespace OpenAIApp.Helpers.OpenAi
                 {
                     Model = Model.ChatGPTTurbo,
                     Temperature = 0.1,
-                    Messages = new ChatMessage[] { new ChatMessage(ChatMessageRole.User, _queryBase + text) }
+                    Messages = new ChatMessage[]
+                    {
+                        new ChatMessage(ChatMessageRole.User, _queryBase + text)
+                    }
                 }
             );
 

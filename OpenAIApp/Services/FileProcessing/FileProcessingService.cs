@@ -97,16 +97,18 @@ namespace OpenAIApp.Services.FileProcessing
 
             if (string.IsNullOrWhiteSpace(fileText))
             {
-                _logger.LogDebug($"Could not process file: {fileId} because pdf to text conversion failed or empty pdf.");
+                _logger.LogDebug(
+                    $"Could not process file: {fileId} because pdf to text conversion failed or empty pdf."
+                );
                 await UpdateState(file, FileState.FAILED);
                 return;
             }
 
             var tagsJson = await _openAiHelper.GetTags(fileText);
 
-            _logger.LogDebug($"OpenAi response for file: {fileId}" +
-                $"{Environment.NewLine}" +
-                $"{tagsJson}");
+            _logger.LogDebug(
+                $"OpenAi response for file: {fileId}" + $"{Environment.NewLine}" + $"{tagsJson}"
+            );
 
             TagModelOpenAi tagModelOpenAi = null;
 
@@ -133,7 +135,9 @@ namespace OpenAIApp.Services.FileProcessing
             tagModels.ForEach(async tag =>
             {
                 var createdTag = await _tagRepo.CreateTagAsync(tag);
-                await _fileTagRepo.CreateFileTagAsync(new FileTag { FileId = file.Id, TagId = createdTag.Id });
+                await _fileTagRepo.CreateFileTagAsync(
+                    new FileTag { FileId = file.Id, TagId = createdTag.Id }
+                );
             });
 
             await UpdateState(file, FileState.COMPLETED);
