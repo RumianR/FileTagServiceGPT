@@ -1,5 +1,6 @@
 ﻿using OpenAI_API.Chat;
 using OpenAI_API.Models;
+using OpenAIApp.Clients.HttpClients;
 using OpenAIApp.Configurations;
 
 namespace OpenAIApp.Helpers.OpenAi
@@ -27,7 +28,10 @@ namespace OpenAIApp.Helpers.OpenAi
                 return string.Empty;
             }
 
+            text = TrimToTokenLimit(text, 2500);
+
             var api = new OpenAI_API.OpenAIAPI(_openAiConfig.Key);
+            api.HttpClientFactory = new CustomHttpClientFactory();
 
             var results = await api.Chat.CreateChatCompletionAsync(
                 new ChatRequest()
@@ -43,5 +47,25 @@ namespace OpenAIApp.Helpers.OpenAi
 
             return results.Choices[0].Message.Content;
         }
+
+        public string TrimToTokenLimit(string input, int maxTokens)
+        {
+            int maxCharacters = maxTokens * 4;  // 4 characters per token
+            if (input.Length > maxCharacters)
+            {
+                // Trim the string to the maximum character count
+                string trimmedInput = input.Substring(0, maxCharacters);
+
+                // Optional: Trim to the last complete word to avoid cutting in the middle of a word
+                int lastSpaceIndex = trimmedInput.LastIndexOf(' ');
+                if (lastSpaceIndex > 0)
+                {
+                    trimmedInput = trimmedInput.Substring(0, lastSpaceIndex);
+                }
+                return trimmedInput;
+            }
+            return input;
+        }
+
     }
 }

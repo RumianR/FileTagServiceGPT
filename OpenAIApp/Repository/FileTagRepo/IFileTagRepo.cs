@@ -8,7 +8,6 @@ namespace OpenAIApp.Repository.FileTagRepo
     public interface IFileTagRepo
     {
         Task<FileTag> CreateFileTagAsync(FileTag fileTag);
-        Task<FileTag> GetFileTagByIdAsync(long id);
         Task<List<FileTag>> GetFileTagsAsync();
         Task<List<FileTag>> GetFileTagByFileId(Guid fileId);
         Task<List<FileTag>> GetFileTagByTagId(Guid tagId);

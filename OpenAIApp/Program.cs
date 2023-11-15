@@ -1,4 +1,5 @@
 using OpenAIApp.Configurations;
+using OpenAIApp.Helpers.Files;
 using OpenAIApp.Helpers.OpenAi;
 using OpenAIApp.Managers;
 using OpenAIApp.Repository.FileRepo;
@@ -32,7 +33,6 @@ namespace OpenAIApp
                         .ReferenceLoopHandling
                         .Ignore;
                 });
-            ;
 
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 

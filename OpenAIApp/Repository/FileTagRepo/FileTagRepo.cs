@@ -34,14 +34,8 @@ namespace OpenAIApp.Repository.FileTagRepo
         {
             var response = await _supabaseClient
                 .From<FileTag>()
-                .Insert(new List<FileTag> { fileTag });
+                .Upsert(new List<FileTag> { fileTag });
             return response.Models.FirstOrDefault();
-        }
-
-        public async Task<FileTag> GetFileTagByIdAsync(long id)
-        {
-            var response = await _supabaseClient.From<FileTag>().Where(x => x.Id == id).Get();
-            return response.Model;
         }
 
         public async Task<List<FileTag>> GetFileTagsAsync()

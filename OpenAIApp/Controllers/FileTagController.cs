@@ -26,8 +26,12 @@ namespace OpenAIApp.Controllers
             {
                 var createdFileTag = await _fileTagRepo.CreateFileTagAsync(fileTag);
                 return CreatedAtAction(
-                    nameof(GetFileTag),
-                    new { id = createdFileTag.Id },
+                    nameof(CreateFileTag),
+                    new
+                    {
+                        fileId = createdFileTag.FileId,
+                        tagId = createdFileTag.TagId
+                    },
                     createdFileTag
                 );
             }
@@ -64,23 +68,6 @@ namespace OpenAIApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error getting file tags for tag with id {tagId}");
-                return StatusCode(500, "Internal server error");
-            }
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetFileTag(long id)
-        {
-            try
-            {
-                var fileTag = await _fileTagRepo.GetFileTagByIdAsync(id);
-                if (fileTag == null)
-                    return NotFound();
-                return Ok(fileTag);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error getting file tag with id {id}");
                 return StatusCode(500, "Internal server error");
             }
         }

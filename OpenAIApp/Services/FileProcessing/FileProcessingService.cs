@@ -61,24 +61,40 @@ namespace OpenAIApp.Services.FileProcessing
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
 
-            while (_fileProcessingQueue.Count > 0)
+            var tasks = new List<Task>();
+            while (_fileProcessingQueue.Count > 0 && tasks.Count < 5)
             {
-                string fileId = _fileProcessingQueue.Dequeue();
-
-                try
-                {
-                    await ProcessFile(fileId);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogDebug($"Could not process file: {fileId}", e);
-                }
+                var fileId = _fileProcessingQueue.Dequeue();
+                tasks.Add(HandleFileCatchAll(fileId));
             }
+
+            await Task.WhenAll(tasks);
 
             _timer.Change(
                 TimeSpan.FromSeconds(_intervalInSeconds),
                 TimeSpan.FromSeconds(_intervalInSeconds)
             );
+        }
+
+        private async Task HandleFileCatchAll(string fileId)
+        {
+            try
+            {
+                await ProcessFile(fileId);
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug($"Could not process file: {fileId}" +
+                    $"{Environment.NewLine}" +
+                    $"{e.Message}", e);
+
+                var file = await _fileRepo.GetFileByIdAsync(Guid.Parse(fileId));
+
+                if (file != null)
+                {
+                    await UpdateState(file, FileState.FAILED);
+                }
+            }
         }
 
         private async Task ProcessFile(string fileId)
@@ -126,7 +142,7 @@ namespace OpenAIApp.Services.FileProcessing
             }
             catch (Exception ex)
             {
-                _logger.LogDebug($"Could not deserialize OpenAi response", ex);
+                _logger.LogDebug($"Could not deserialize OpenAi response: {ex.Message}", ex);
                 await UpdateState(file, FileState.FAILED);
                 return;
             }
@@ -148,6 +164,8 @@ namespace OpenAIApp.Services.FileProcessing
                 {
                     existingTag = await _tagRepo.CreateTagAsync(tag);
                 }
+
+
 
                 await _fileTagRepo.CreateFileTagAsync(
                     new FileTag { FileId = file.Id, TagId = existingTag.Id }

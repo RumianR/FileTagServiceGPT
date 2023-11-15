@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using IronOcr;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
 
@@ -42,25 +43,39 @@ namespace OpenAIApp.Helpers.Files
             return extractedText;
         }
 
-        private static string ExtractTextFromPdf(string filePath, int maxPages)
+        public static string ExtractTextFromPdf(string filePath, int maxPages)
         {
-            using (PdfReader reader = new PdfReader(filePath))
+            //using (PdfReader reader = new PdfReader(filePath))
+            //{
+            //    StringWriter output = new StringWriter();
+
+            //    int numberOfPages = Math.Min(reader.NumberOfPages, maxPages);
+            //    for (int i = 1; i <= numberOfPages; i++)
+            //    {
+            //        output.WriteLine(
+            //            PdfTextExtractor.GetTextFromPage(
+            //                reader,
+            //                i,
+            //                new SimpleTextExtractionStrategy()
+            //            )
+            //        );
+            //    }
+
+            //    return output.ToString();
+            //}
+
+            var ocr = new IronTesseract();
+
+            using (var ocrInput = new OcrInput())
             {
-                StringWriter output = new StringWriter();
+                ocrInput.AddPdf(filePath);
 
-                int numberOfPages = Math.Min(reader.NumberOfPages, maxPages);
-                for (int i = 1; i <= numberOfPages; i++)
-                {
-                    output.WriteLine(
-                        PdfTextExtractor.GetTextFromPage(
-                            reader,
-                            i,
-                            new SimpleTextExtractionStrategy()
-                        )
-                    );
-                }
+                // Optionally Apply Filters if needed:
+                // ocrInput.Deskew();  // use only if image not straight
+                // ocrInput.DeNoise(); // use only if image contains digital noise
 
-                return output.ToString();
+                var ocrResult = ocr.Read(ocrInput);
+                return ocrResult.Text;
             }
         }
     }
