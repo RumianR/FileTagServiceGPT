@@ -29,5 +29,11 @@ namespace OpenAIApp.Models
 
         [Column("state")]
         public int State { get; set; }
+
+        [Column("pages")]
+        public int Pages { get; set; }
+
+        [Column("size")]
+        public long Size { get; set; }
     }
 }

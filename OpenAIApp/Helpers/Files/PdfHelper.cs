@@ -5,15 +5,18 @@ using System.Threading.Tasks;
 using IronOcr;
 using iTextSharp.text.pdf;
 using iTextSharp.text.pdf.parser;
+using OpenAIApp.Common;
 
 namespace OpenAIApp.Helpers.Files
 {
     public static class PdfHelper
     {
-        public static async Task<string> GetTextAsync(string url, int maxPages = int.MaxValue)
+        public static async Task<FileMetadata> GetFileMetadataAsync(string url, int maxPages = int.MaxValue)
         {
             string tempFilePath = System.IO.Path.GetTempFileName();
-            string extractedText;
+            string extractedText = string.Empty;
+            long lengthOfFileInBytes = 0;
+            int numberOfPages = 0;
 
             try
             {
@@ -25,11 +28,14 @@ namespace OpenAIApp.Helpers.Files
                     using (var fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
                     {
                         await response.Content.CopyToAsync(fs);
+                        lengthOfFileInBytes = fs.Length;
                     }
                 }
 
                 // Extract text from the PDF file
                 extractedText = ExtractTextFromPdf(tempFilePath, maxPages);
+                numberOfPages = GetNumberOfPages(tempFilePath);
+
             }
             finally
             {
@@ -40,7 +46,12 @@ namespace OpenAIApp.Helpers.Files
                 }
             }
 
-            return extractedText;
+            return new FileMetadata
+            {
+                FileContentText = extractedText,
+                FileLengthInBytes = lengthOfFileInBytes,
+                NumberOfPages = numberOfPages
+            };
         }
 
         public static string ExtractTextFromPdf(string filePath, int maxPages)
@@ -77,6 +88,16 @@ namespace OpenAIApp.Helpers.Files
                 var ocrResult = ocr.Read(ocrInput);
                 return ocrResult.Text;
             }
+        }
+
+        public static int GetNumberOfPages(string filePath)
+        {
+            using (PdfReader reader = new PdfReader(filePath))
+            {
+
+                return reader.NumberOfPages;
+            }
+
         }
     }
 }

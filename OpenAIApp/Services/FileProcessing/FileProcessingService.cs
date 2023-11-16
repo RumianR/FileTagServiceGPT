@@ -117,7 +117,12 @@ namespace OpenAIApp.Services.FileProcessing
 
             await UpdateState(file, FileState.PROCESSING);
 
-            var fileText = await PdfHelper.GetTextAsync(file.Url);
+            var metadata = await PdfHelper.GetFileMetadataAsync(file.Url);
+
+            file.Pages = metadata.NumberOfPages;
+            file.Size = metadata.FileLengthInBytes;
+
+            var fileText = metadata.FileContentText;
 
             if (string.IsNullOrWhiteSpace(fileText))
             {
@@ -171,6 +176,7 @@ namespace OpenAIApp.Services.FileProcessing
                     new FileTag { FileId = file.Id, TagId = existingTag.Id }
                 );
             });
+
 
             await UpdateState(file, FileState.COMPLETED);
         }
