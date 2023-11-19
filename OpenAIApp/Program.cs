@@ -8,6 +8,7 @@ using OpenAIApp.Repository.TagRepo;
 using OpenAIApp.Services;
 using OpenAIApp.Services.FileProcessing;
 using OpenAIApp.Services.Jobs;
+using Serilog;
 using Supabase;
 
 namespace OpenAIApp
@@ -17,6 +18,8 @@ namespace OpenAIApp
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+
 
             CreateSupabaseDI(builder);
 
@@ -63,12 +66,15 @@ namespace OpenAIApp
 
             var app = builder.Build();
 
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseSerilogRequestLogging();
 
             app.UseHttpsRedirection();
 

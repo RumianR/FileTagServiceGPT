@@ -47,7 +47,16 @@ namespace OpenAIApp.Services.FileProcessing
 
         public async void AddNewFileToQueue(string fileId)
         {
-            var file = await _fileRepo.GetFileByIdAsync(Guid.Parse(fileId));
+            FileModel file = null;
+
+            try
+            {
+                file = await _fileRepo.GetFileByIdAsync(Guid.Parse(fileId));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Could not get file {fileId} due to : {ex.Message}");
+            }
 
             if (file != null && file.State == (int)FileState.UPLOADED)
             {
@@ -177,14 +186,23 @@ namespace OpenAIApp.Services.FileProcessing
                 );
             });
 
-
+            file.Name = tagModelOpenAi.Name;
             await UpdateState(file, FileState.COMPLETED);
         }
 
         private async Task UpdateState(FileModel file, FileState fileState)
         {
             file.State = (int)fileState;
-            await _fileRepo.UpdateFileAsync(file);
+
+            try
+            {
+                await _fileRepo.UpdateFileAsync(file);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Could not update file {file.Id} state to {fileState} due to: {ex}");
+            }
         }
 
         public void Start()
