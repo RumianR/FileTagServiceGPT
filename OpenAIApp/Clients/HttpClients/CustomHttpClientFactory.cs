@@ -5,7 +5,7 @@
         public HttpClient CreateClient(string name)
         {
             var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(200);
+            httpClient.Timeout = TimeSpan.FromSeconds(1000);
 
             return httpClient;
         }

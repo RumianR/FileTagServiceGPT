@@ -7,5 +7,8 @@
         public long FileLengthInBytes { get; set; }
 
         public int NumberOfPages { get; set; }
+
+        public string TempPathToThumbnail { get; set; } = string.Empty;
+
     }
 }

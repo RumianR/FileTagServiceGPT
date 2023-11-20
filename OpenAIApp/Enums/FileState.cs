@@ -7,6 +7,7 @@
         QUEUED,
         PROCESSING,
         COMPLETED,
-        FAILED
+        FAILED,
+        DEBUG
     }
 }

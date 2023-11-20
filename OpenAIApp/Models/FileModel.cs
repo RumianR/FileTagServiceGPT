@@ -12,6 +12,9 @@ namespace OpenAIApp.Models
         [Column("name")]
         public string Name { get; set; }
 
+        [Column("thumbnail_url")]
+        public string ThumbnailUrl { get; set; }
+
         [Column("url")]
         public string Url { get; set; }
 

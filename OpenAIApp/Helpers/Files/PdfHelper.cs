@@ -1,22 +1,22 @@
-﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿using System.Drawing;
+using System.Drawing.Imaging;
+using Ghostscript.NET.Rasterizer;
 using IronOcr;
 using iTextSharp.text.pdf;
-using iTextSharp.text.pdf.parser;
 using OpenAIApp.Common;
 
 namespace OpenAIApp.Helpers.Files
 {
     public static class PdfHelper
     {
-        public static async Task<FileMetadata> GetFileMetadataAsync(string url, int maxPages = int.MaxValue)
+        public static async Task<FileMetadata> GetFileMetadataAsync(string url, Guid fileId, int maxPages = int.MaxValue)
         {
-            string tempFilePath = System.IO.Path.GetTempFileName();
+            string tempFilePath = System.IO.Path.GetTempFileName().Replace(".tmp", ".pdf");
+
             string extractedText = string.Empty;
             long lengthOfFileInBytes = 0;
             int numberOfPages = 0;
+            var thumbnailFilePath = tempFilePath.Replace(".pdf", string.Empty) + $"{fileId}_thumbnail.png";
 
             try
             {
@@ -35,7 +35,7 @@ namespace OpenAIApp.Helpers.Files
                 // Extract text from the PDF file
                 extractedText = ExtractTextFromPdf(tempFilePath, maxPages);
                 numberOfPages = GetNumberOfPages(tempFilePath);
-
+                CreateThumbnail(tempFilePath, thumbnailFilePath, 300);
             }
             finally
             {
@@ -50,7 +50,8 @@ namespace OpenAIApp.Helpers.Files
             {
                 FileContentText = extractedText,
                 FileLengthInBytes = lengthOfFileInBytes,
-                NumberOfPages = numberOfPages
+                NumberOfPages = numberOfPages,
+                TempPathToThumbnail = thumbnailFilePath
             };
         }
 
@@ -99,5 +100,55 @@ namespace OpenAIApp.Helpers.Files
             }
 
         }
+
+        public static void CreateThumbnail(string pdfPath, string thumbnailPath, int dpi)
+        {
+            using (var rasterizer = new GhostscriptRasterizer())
+            {
+                rasterizer.Open(pdfPath);
+
+                // Assuming you want the first page
+                var pdfPageImage = rasterizer.GetPage(dpi, 1);
+
+                //// You can resize the image here if needed
+                //var thumbnail = ResizeImage(pdfPageImage, new System.Drawing.Size(1024, 1463)); // Example size
+
+                pdfPageImage.Save(thumbnailPath, ImageFormat.Png); //ONLY SUPPORTED ON WINDOWS
+            }
+        }
+
+        private static System.Drawing.Image ResizeImage(System.Drawing.Image image, System.Drawing.Size size)
+        {
+            var resizedImage = new Bitmap(size.Width, size.Height);
+            using (var graphics = Graphics.FromImage(resizedImage))
+            {
+                graphics.DrawImage(image, 0, 0, size.Width, size.Height); //ONLY SUPPORTED ON WINDOWS
+            }
+            return resizedImage;
+        }
+
+        public static byte[] ConvertToBase64(string imagePath)
+        {
+            try
+            {
+                using (System.Drawing.Image image = System.Drawing.Image.FromFile(imagePath))
+                {
+                    using (MemoryStream m = new MemoryStream())
+                    {
+                        // Convert Image to byte[]
+                        image.Save(m, ImageFormat.Png);
+                        byte[] imageBytes = m.ToArray();
+
+                        return imageBytes;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+                return null;
+            }
+        }
+
     }
 }

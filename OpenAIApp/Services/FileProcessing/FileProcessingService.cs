@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using OpenAIApp.Common;
 using OpenAIApp.Configurations;
 using OpenAIApp.Enums;
 using OpenAIApp.Helpers.Files;
@@ -9,6 +10,9 @@ using OpenAIApp.Repository.FileRepo;
 using OpenAIApp.Repository.FileTagRepo;
 using OpenAIApp.Repository.TagRepo;
 using Supabase;
+using System.Security.Policy;
+using System;
+using OpenAIApp.Helpers;
 
 namespace OpenAIApp.Services.FileProcessing
 {
@@ -24,6 +28,7 @@ namespace OpenAIApp.Services.FileProcessing
         private Timer _timer;
         private readonly int _intervalInSeconds =
             PollingConfig.FileProcessingServicePollingIntervalInSeconds;
+        private readonly string _baseUrl = "https://nxoavkcgtuzdxbfamjjh.supabase.co/storage/v1/object/public/";
 
         public FileProcessingService(
             ILogger<FileProcessingService> logger,
@@ -126,7 +131,9 @@ namespace OpenAIApp.Services.FileProcessing
 
             await UpdateState(file, FileState.PROCESSING);
 
-            var metadata = await PdfHelper.GetFileMetadataAsync(file.Url);
+            var metadata = await PdfHelper.GetFileMetadataAsync(file.Url, file.Id);
+
+            file = await UpdateThumbnail(file, metadata);
 
             file.Pages = metadata.NumberOfPages;
             file.Size = metadata.FileLengthInBytes;
@@ -189,6 +196,41 @@ namespace OpenAIApp.Services.FileProcessing
             file.Name = tagModelOpenAi.Name;
             await UpdateState(file, FileState.COMPLETED);
         }
+
+        private async Task<FileModel> UpdateThumbnail(FileModel file, FileMetadata fileMetadata)
+        {
+            var localPath = fileMetadata.TempPathToThumbnail;
+            var (userId, fileFolder) = UrlHelper.ParseUserIdAndFolder(file.Url);
+
+            var supabasePath = $"{userId}/{fileFolder}/{file.Id}_thumbnail.png";
+
+            try
+            {
+                var resultPath = await _supabaseClient.Storage
+                  .From($"files")
+                  .Upload(localPath, supabasePath);
+
+                file.ThumbnailUrl = _baseUrl + resultPath;
+
+                await UpdateState(file, FileState.PROCESSING);
+            }
+
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Could not upload thumbnail for file: {file.Id} due to error: {ex.Message}");
+            }
+
+            finally
+            {
+                if (File.Exists(localPath))
+                {
+                    File.Delete(localPath);
+                }
+            }
+
+            return file;
+        }
+
 
         private async Task UpdateState(FileModel file, FileState fileState)
         {
