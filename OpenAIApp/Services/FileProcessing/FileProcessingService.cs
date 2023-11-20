@@ -30,6 +30,9 @@ namespace OpenAIApp.Services.FileProcessing
             PollingConfig.FileProcessingServicePollingIntervalInSeconds;
         private readonly string _baseUrl = "https://nxoavkcgtuzdxbfamjjh.supabase.co/storage/v1/object/public/";
 
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10); // Allows 5 concurrent tasks
+
+
         public FileProcessingService(
             ILogger<FileProcessingService> logger,
             Client supabaseClient,
@@ -75,19 +78,20 @@ namespace OpenAIApp.Services.FileProcessing
         {
             _timer.Change(Timeout.Infinite, Timeout.Infinite);
 
-            var tasks = new List<Task>();
-            while (_fileProcessingQueue.Count > 0 && tasks.Count < 5)
+            while (_fileProcessingQueue.Count > 0)
             {
-                var fileId = _fileProcessingQueue.Dequeue();
-                tasks.Add(HandleFileCatchAll(fileId));
+                await _semaphore.WaitAsync(); // Wait to enter the semaphore
+
+                if (_fileProcessingQueue.TryDequeue(out var fileId))
+                {
+                    _ = HandleFileCatchAll(fileId).ContinueWith(t =>
+                    {
+                        _semaphore.Release(); // Release the semaphore when done
+                    });
+                }
             }
 
-            await Task.WhenAll(tasks);
-
-            _timer.Change(
-                TimeSpan.FromSeconds(_intervalInSeconds),
-                TimeSpan.FromSeconds(_intervalInSeconds)
-            );
+            _timer.Change(TimeSpan.FromSeconds(_intervalInSeconds), TimeSpan.FromSeconds(_intervalInSeconds));
         }
 
         private async Task HandleFileCatchAll(string fileId)
