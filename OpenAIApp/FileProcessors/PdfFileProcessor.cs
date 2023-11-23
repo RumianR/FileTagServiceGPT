@@ -92,7 +92,7 @@ namespace OpenAIApp.FileProcessors
                     continue;
                 }
 
-                text += pageIndex;
+                text += pageText;
             }
 
             return text;
