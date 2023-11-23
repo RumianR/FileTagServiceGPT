@@ -10,6 +10,8 @@ namespace OpenAIApp.Managers
     {
         private readonly TesseractEngine _engine;
         private readonly ILogger<TesseractManager> _logger;
+        private readonly object _lockObj = new object(); // Object for locking
+
 
         public TesseractManager(ILogger<TesseractManager> logger)
         {
@@ -21,21 +23,24 @@ namespace OpenAIApp.Managers
 
         public string ExtractTextFromImage(Image image)
         {
-            try
+            lock (_lockObj) // Only one thread can enter this block at a time
             {
-                using (var bitmap = new Bitmap(image))
+                try
                 {
-                    using (var page = _engine.Process(bitmap))
+                    using (var bitmap = new Bitmap(image))
                     {
-                        return page.GetText();
+                        using (var page = _engine.Process(bitmap))
+                        {
+                            return page.GetText();
+                        }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                // Handle exceptions
-                _logger.LogDebug("Error: " + ex.Message);
-                return string.Empty;
+                catch (Exception ex)
+                {
+                    // Handle exceptions
+                    _logger.LogDebug("Error: " + ex.Message);
+                    return string.Empty;
+                }
             }
         }
     }
