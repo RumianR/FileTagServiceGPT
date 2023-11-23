@@ -40,7 +40,7 @@ namespace OpenAIApp.Services.Jobs
 
             try
             {
-                filesToProcess = await _fileRepo.GetFilesByStates(new List<FileState> { FileState.UPLOADED });
+                filesToProcess = await _fileRepo.GetFilesByStates(new List<FileState> { PollingConfig.PollingState });
             }
             catch (Exception ex)
             {

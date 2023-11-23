@@ -2,7 +2,6 @@
 using OpenAIApp.Common;
 using OpenAIApp.Configurations;
 using OpenAIApp.Enums;
-using OpenAIApp.Helpers.Files;
 using OpenAIApp.Helpers.OpenAi;
 using OpenAIApp.Models;
 using OpenAIApp.Models.OpenAi;
@@ -13,6 +12,7 @@ using Supabase;
 using System.Security.Policy;
 using System;
 using OpenAIApp.Helpers;
+using OpenAIApp.FileProcessors;
 
 namespace OpenAIApp.Services.FileProcessing
 {
@@ -32,10 +32,13 @@ namespace OpenAIApp.Services.FileProcessing
 
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10); // Allows 5 concurrent tasks
 
+        private readonly PdfFileProcessor _pdfFileProcessor;
+
 
         public FileProcessingService(
             ILogger<FileProcessingService> logger,
             Client supabaseClient,
+            PdfFileProcessor pdfFileProcessor,
             IOpenAiHelper openAiHelper,
             IFileRepo fileRepo,
             ITagRepo tagRepo,
@@ -45,6 +48,7 @@ namespace OpenAIApp.Services.FileProcessing
             _logger = logger;
             _fileProcessingQueue = new Queue<string>();
             _supabaseClient = supabaseClient;
+            _pdfFileProcessor = pdfFileProcessor;
             _openAiHelper = openAiHelper;
             _fileRepo = fileRepo;
             _tagRepo = tagRepo;
@@ -66,7 +70,7 @@ namespace OpenAIApp.Services.FileProcessing
                 _logger.LogDebug($"Could not get file {fileId} due to : {ex.Message}");
             }
 
-            if (file != null && file.State == (int)FileState.UPLOADED)
+            if (file != null && file.State == (int)PollingConfig.PollingState)
             {
                 _fileProcessingQueue.Enqueue(fileId);
 
@@ -135,7 +139,9 @@ namespace OpenAIApp.Services.FileProcessing
 
             await UpdateState(file, FileState.PROCESSING);
 
-            var metadata = await PdfHelper.GetFileMetadataAsync(file.Url, file.Id);
+            //var metadata = await PdfHelper.GetFileMetadataAsync(file.Url, file.Id);
+
+            var metadata = await _pdfFileProcessor.GetFileMetadataAsync(file.Url, file.Id);
 
             file = await UpdateThumbnail(file, metadata);
 
@@ -181,20 +187,32 @@ namespace OpenAIApp.Services.FileProcessing
 
             var tagModels = tagModelOpenAi.Tags.Select(tag => new Tag { Name = tag }).ToList();
 
+
             tagModels.ForEach(async tag =>
             {
                 var existingTag = await _tagRepo.GetTagByNameAsync(tag.Name);
 
                 if (existingTag == null)
                 {
-                    existingTag = await _tagRepo.CreateTagAsync(tag);
+                    try
+                    {
+                        existingTag = await _tagRepo.CreateTagAsync(tag);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug($"Could not create tag error: {ex.Message}");
+                    }
                 }
 
-
-
-                await _fileTagRepo.CreateFileTagAsync(
-                    new FileTag { FileId = file.Id, TagId = existingTag.Id }
-                );
+                try
+                {
+                    await _fileTagRepo.CreateFileTagAsync(new FileTag { FileId = file.Id, TagId = existingTag.Id });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug($"Could not create file tag error: {ex.Message}");
+                }
             });
 
             file.Name = tagModelOpenAi.Name;

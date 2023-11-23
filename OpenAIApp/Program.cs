@@ -1,5 +1,5 @@
 using OpenAIApp.Configurations;
-using OpenAIApp.Helpers.Files;
+using OpenAIApp.FileProcessors;
 using OpenAIApp.Helpers.OpenAi;
 using OpenAIApp.Managers;
 using OpenAIApp.Repository.FileRepo;
@@ -52,12 +52,16 @@ namespace OpenAIApp
 
             builder.Services.AddSingleton<IService, JobService>();
 
+            builder.Services.AddSingleton<ITesseractManager, TesseractManager>();
+
+            builder.Services.AddSingleton<PdfFileProcessor>();
+
             builder.Services.AddSingleton<FileProcessingService>();
+
+            // Need to register same instance to two diff interface for hosted service
             builder
                 .Services
-                .AddSingleton<IFileProcesssingService>(
-                    x => x.GetRequiredService<FileProcessingService>()
-                );
+                .AddSingleton<IFileProcesssingService>(x => x.GetRequiredService<FileProcessingService>());
             builder
                 .Services
                 .AddSingleton<IService>(x => x.GetRequiredService<FileProcessingService>());
