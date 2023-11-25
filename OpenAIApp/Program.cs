@@ -1,5 +1,6 @@
 using OpenAIApp.Configurations;
 using OpenAIApp.FileProcessors;
+using OpenAIApp.FileProcessors.ImageProcessing;
 using OpenAIApp.Helpers.OpenAi;
 using OpenAIApp.Managers;
 using OpenAIApp.Repository.FileRepo;
@@ -55,6 +56,8 @@ namespace OpenAIApp
             builder.Services.AddSingleton<ITesseractManager, TesseractManager>();
 
             builder.Services.AddSingleton<PdfFileProcessor>();
+            builder.Services.AddSingleton<ImageFileProcessor>();
+
 
             builder.Services.AddSingleton<FileProcessingService>();
 

@@ -43,5 +43,48 @@ namespace OpenAIApp.Managers
                 }
             }
         }
+
+        public string ExtractTextFromImage(Bitmap bitmap)
+        {
+            lock (_lockObj) // Only one thread can enter this block at a time
+            {
+                try
+                {
+                    using (var page = _engine.Process(bitmap))
+                    {
+                        return page.GetText();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle exceptions
+                    _logger.LogDebug("Error: " + ex.Message);
+                    return string.Empty;
+                }
+            }
+        }
+
+        public string ExtractTextFromImage(string filepath)
+        {
+            lock (_lockObj) // Only one thread can enter this block at a time
+            {
+                try
+                {
+                    using (var bitmap = new Bitmap(filepath))
+                    {
+                        using (var page = _engine.Process(bitmap))
+                        {
+                            return page.GetText();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle exceptions
+                    _logger.LogDebug("Error: " + ex.Message);
+                    return string.Empty;
+                }
+            }
+        }
     }
 }

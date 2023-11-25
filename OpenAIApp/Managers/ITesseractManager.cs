@@ -1,4 +1,5 @@
-﻿using Image = System.Drawing.Image;
+﻿using System.Drawing;
+using Image = System.Drawing.Image;
 
 namespace OpenAIApp.Managers
 {
@@ -6,5 +7,8 @@ namespace OpenAIApp.Managers
     {
         string ExtractTextFromImage(Image image);
 
+        string ExtractTextFromImage(string filepath);
+
+        string ExtractTextFromImage(Bitmap bitmap);
     }
 }

@@ -3,6 +3,7 @@ using iTextSharp.text.pdf;
 using OpenAIApp.Common;
 using OpenAIApp.Managers;
 using System.Drawing.Imaging;
+using static Org.BouncyCastle.Bcpg.Attr.ImageAttrib;
 using Image = System.Drawing.Image;
 
 
@@ -27,7 +28,7 @@ namespace OpenAIApp.FileProcessors
             string extractedText = string.Empty;
             long lengthOfFileInBytes = 0;
             int numberOfPages = 0;
-            var thumbnailFilePath = tempFilePath.Replace(".pdf", string.Empty) + $"{fileId}_thumbnail.png";
+            var thumbnailBase64 = string.Empty;
 
             try
             {
@@ -49,7 +50,7 @@ namespace OpenAIApp.FileProcessors
 
                 extractedText = ExtractTextFromPdf(tempFilePath, numberOfPages);
 
-                CreateThumbnail(tempFilePath, thumbnailFilePath, 100);
+                thumbnailBase64 = GetBase64Thumbnail(tempFilePath, 50);
             }
             finally
             {
@@ -65,14 +66,15 @@ namespace OpenAIApp.FileProcessors
                 FileContentText = extractedText,
                 FileLengthInBytes = lengthOfFileInBytes,
                 NumberOfPages = numberOfPages,
-                TempPathToThumbnail = thumbnailFilePath
+                ThumbnailBase64 = thumbnailBase64,
+                FileType = Enums.FileType.PDF
             };
         }
 
         private string ExtractTextFromPdf(string tempFilePath, int totalNumberOfPages)
         {
             var text = string.Empty;
-            var dpi = 100;
+            var dpi = 300;
 
             for (var pageIndex = 1; pageIndex <= totalNumberOfPages; pageIndex++)
             {
@@ -108,17 +110,31 @@ namespace OpenAIApp.FileProcessors
 
         }
 
-        public void CreateThumbnail(string pdfPath, string thumbnailPath, int dpi)
+        public string GetBase64Thumbnail(string pdfPath, int dpi)
         {
             try
             {
                 var image = GetImage(pdfPath, dpi, 1);
-                image.Save(thumbnailPath, ImageFormat.Png); //ONLY SUPPORTED ON WINDOWS
+                using (var memoryStream = new MemoryStream())
+                {
+                    memoryStream.Position = 0;
+                    image.Save(memoryStream, ImageFormat.Png);
+
+                    // Convert the MemoryStream to a byte array
+                    byte[] imageBytes = memoryStream.ToArray();
+
+                    // Convert the byte array to a Base64 string
+                    string base64String = Convert.ToBase64String(imageBytes);
+
+                    return base64String;
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogDebug($"Could not create thumbnail error: {ex.Message}");
+                _logger.LogDebug($"Could not create base 64 thumbnail error: {ex.Message}");
             }
+
+            return string.Empty;
         }
 
         public Image GetImage(string pdfPath, int dpi, int page)

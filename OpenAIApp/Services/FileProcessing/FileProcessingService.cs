@@ -13,6 +13,7 @@ using System.Security.Policy;
 using System;
 using OpenAIApp.Helpers;
 using OpenAIApp.FileProcessors;
+using OpenAIApp.FileProcessors.ImageProcessing;
 
 namespace OpenAIApp.Services.FileProcessing
 {
@@ -33,12 +34,14 @@ namespace OpenAIApp.Services.FileProcessing
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10); // Allows 5 concurrent tasks
 
         private readonly PdfFileProcessor _pdfFileProcessor;
+        private readonly ImageFileProcessor _imageFileProcessor;
 
 
         public FileProcessingService(
             ILogger<FileProcessingService> logger,
             Client supabaseClient,
             PdfFileProcessor pdfFileProcessor,
+            ImageFileProcessor imageFileProcessor,
             IOpenAiHelper openAiHelper,
             IFileRepo fileRepo,
             ITagRepo tagRepo,
@@ -49,6 +52,7 @@ namespace OpenAIApp.Services.FileProcessing
             _fileProcessingQueue = new Queue<string>();
             _supabaseClient = supabaseClient;
             _pdfFileProcessor = pdfFileProcessor;
+            _imageFileProcessor = imageFileProcessor;
             _openAiHelper = openAiHelper;
             _fileRepo = fileRepo;
             _tagRepo = tagRepo;
@@ -131,20 +135,37 @@ namespace OpenAIApp.Services.FileProcessing
                 return;
             }
 
-            if (!file.MimeType.Contains("pdf"))
+            var fileType = GetFileType(file);
+
+            if (fileType == FileType.UNSUPPORTED)
             {
-                _logger.LogDebug($"We are only processing pdf files for the moment");
+                await UpdateState(file, FileState.FAILED);
                 return;
             }
 
             await UpdateState(file, FileState.PROCESSING);
 
-            //var metadata = await PdfHelper.GetFileMetadataAsync(file.Url, file.Id);
 
-            var metadata = await _pdfFileProcessor.GetFileMetadataAsync(file.Url, file.Id);
+            FileMetadata metadata = null;
+
+            if (fileType == FileType.PDF)
+            {
+                metadata = await _pdfFileProcessor.GetFileMetadataAsync(file.Url, file.Id);
+            }
+
+            else if (fileType == FileType.IMAGE)
+            {
+                metadata = await _imageFileProcessor.GetFileMetadataAsync(file.Url, file.Id);
+            }
+
+            if (metadata == null)
+            {
+                _logger.LogDebug($"Could not process file: {fileId} because file metadata creation returned null.");
+                await UpdateState(file, FileState.FAILED);
+                return;
+            }
 
             file = await UpdateThumbnail(file, metadata);
-
             file.Pages = metadata.NumberOfPages;
             file.Size = metadata.FileLengthInBytes;
 
@@ -219,18 +240,39 @@ namespace OpenAIApp.Services.FileProcessing
             await UpdateState(file, FileState.COMPLETED);
         }
 
+        private FileType GetFileType(FileModel file)
+        {
+            var baseLog = $"file {file.Id} with mime type {file.MimeType}";
+
+            if (file.MimeType.Contains("pdf"))
+            {
+                _logger.LogDebug($"{baseLog} is classified as a pdf");
+                return FileType.PDF;
+            }
+
+            if (file.MimeType.Contains("image"))
+            {
+                _logger.LogDebug($"{baseLog} is classified as a image");
+                return FileType.IMAGE;
+            }
+
+            _logger.LogDebug($"{baseLog} is an unsupported type");
+
+            return FileType.UNSUPPORTED;
+        }
+
         private async Task<FileModel> UpdateThumbnail(FileModel file, FileMetadata fileMetadata)
         {
-            var localPath = fileMetadata.TempPathToThumbnail;
             var (userId, fileFolder) = UrlHelper.ParseUserIdAndFolder(file.Url);
 
             var supabasePath = $"{userId}/{fileFolder}/{file.Id}_thumbnail.png";
 
             try
             {
+                var byteArray = Convert.FromBase64String(fileMetadata.ThumbnailBase64);
                 var resultPath = await _supabaseClient.Storage
                   .From($"files")
-                  .Upload(localPath, supabasePath);
+                  .Upload(byteArray, supabasePath);
 
                 file.ThumbnailUrl = _baseUrl + resultPath;
 
@@ -242,17 +284,8 @@ namespace OpenAIApp.Services.FileProcessing
                 _logger.LogDebug($"Could not upload thumbnail for file: {file.Id} due to error: {ex.Message}");
             }
 
-            finally
-            {
-                if (File.Exists(localPath))
-                {
-                    File.Delete(localPath);
-                }
-            }
-
             return file;
         }
-
 
         private async Task UpdateState(FileModel file, FileState fileState)
         {

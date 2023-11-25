@@ -1,4 +1,6 @@
-﻿namespace OpenAIApp.Common
+﻿using OpenAIApp.Enums;
+
+namespace OpenAIApp.Common
 {
     public class FileMetadata
     {
@@ -8,7 +10,10 @@
 
         public int NumberOfPages { get; set; }
 
-        public string TempPathToThumbnail { get; set; } = string.Empty;
+        public string ThumbnailBase64 { get; set; } = string.Empty;
+
+
+        public FileType FileType { get; set; } = FileType.UNSUPPORTED;
 
     }
 }
