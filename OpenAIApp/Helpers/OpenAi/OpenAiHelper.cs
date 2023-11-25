@@ -8,6 +8,9 @@ namespace OpenAIApp.Helpers.OpenAi
     public class OpenAiHelper : IOpenAiHelper
     {
         private readonly OpenAiConfig _openAiConfig;
+        private readonly OpenAI_API.OpenAIAPI _api;
+
+
 
         private readonly string _queryBase =
             "Return me in JSON format, and it absolutely must be in JSON, "
@@ -20,6 +23,8 @@ namespace OpenAIApp.Helpers.OpenAi
         public OpenAiHelper(OpenAiConfig openAiConfig)
         {
             _openAiConfig = openAiConfig;
+            _api = new OpenAI_API.OpenAIAPI(_openAiConfig.Key);
+            _api.HttpClientFactory = new CustomHttpClientFactory();
         }
 
         public async Task<string> GetTags(string text)
@@ -31,10 +36,8 @@ namespace OpenAIApp.Helpers.OpenAi
 
             text = TrimToTokenLimit(text, 2500);
 
-            var api = new OpenAI_API.OpenAIAPI(_openAiConfig.Key);
-            api.HttpClientFactory = new CustomHttpClientFactory();
 
-            var results = await api.Chat.CreateChatCompletionAsync(
+            var results = await _api.Chat.CreateChatCompletionAsync(
                 new ChatRequest()
                 {
                     Model = Model.ChatGPTTurbo,

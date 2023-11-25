@@ -49,7 +49,7 @@ namespace OpenAIApp.FileProcessors.ImageProcessing
 
                 var convertedStream = GetConvertedStream(tempFilePath);
 
-                extractedText = ExtractTextFromImage(convertedStream);
+                extractedText = await ExtractTextFromImage(convertedStream);
                 thumbnailBase64 = convertedStream.Base64Png;
 
             }
@@ -72,17 +72,17 @@ namespace OpenAIApp.FileProcessors.ImageProcessing
             };
         }
 
-        private string ExtractTextFromImage(ConvertedStream convertedStream)
+        private Task<string> ExtractTextFromImage(ConvertedStream convertedStream)
         {
             try
             {
-                return _tesseractManager.ExtractTextFromImage(convertedStream.Bitmap);
+                return _tesseractManager.ExtractTextFromImageAsync(convertedStream.Bitmap);
 
             }
             catch (Exception ex)
             {
                 _logger.LogDebug($"Could not read image from converted stream error: {ex.Message}");
-                return string.Empty;
+                return Task.FromResult(string.Empty);
             }
 
         }

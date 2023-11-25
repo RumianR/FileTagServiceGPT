@@ -1,14 +1,15 @@
 ﻿using System.Drawing;
+using System.Threading.Tasks;
 using Image = System.Drawing.Image;
 
 namespace OpenAIApp.Managers
 {
     public interface ITesseractManager
     {
-        string ExtractTextFromImage(Image image);
+        Task<string> ExtractTextFromImageAsync(Image image, CancellationToken cancellationToken = default);
 
-        string ExtractTextFromImage(string filepath);
+        Task<string> ExtractTextFromImageAsync(string filepath, CancellationToken cancellationToken = default);
 
-        string ExtractTextFromImage(Bitmap bitmap);
+        Task<string> ExtractTextFromImageAsync(Bitmap bitmap, CancellationToken cancellationToken = default);
     }
 }

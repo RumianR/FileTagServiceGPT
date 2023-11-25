@@ -1,90 +1,78 @@
-﻿using System.Drawing;
+﻿using OpenAIApp.Concurrency;
+using System;
+using System.Collections.Concurrent;
+using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
 using Tesseract;
 using Image = System.Drawing.Image;
 
 namespace OpenAIApp.Managers
 {
-
-
     public class TesseractManager : ITesseractManager
     {
-        private readonly TesseractEngine _engine;
+        private readonly AsyncProducerConsumerQueue<TesseractEngine> _engines;
         private readonly ILogger<TesseractManager> _logger;
-        private readonly object _lockObj = new object(); // Object for locking
-
+        private const int EngineCount = 10; // Number of TesseractEngine instances
 
         public TesseractManager(ILogger<TesseractManager> logger)
         {
             _logger = logger;
-            // Initialize the Tesseract engine. You need to specify the path to the tessdata folder.
-            // Ensure that tessdata is included in your project and its build action is set to "Content".
-            _engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default);
+            _engines = new AsyncProducerConsumerQueue<TesseractEngine>(logger);
+
+            // Initialize a pool of TesseractEngine instances
+            for (int i = 0; i < EngineCount; i++)
+            {
+                _engines.Enqueue(new TesseractEngine(@"./tessdata", "eng", EngineMode.Default));
+            }
         }
 
-        public string ExtractTextFromImage(Image image)
+        private async Task<string> ProcessBitmapAsync(Bitmap bitmap, CancellationToken cancellationToken)
         {
-            lock (_lockObj) // Only one thread can enter this block at a time
+            TesseractEngine engine = null;
+            try
             {
-                try
+                engine = await _engines.DequeueAsync(cancellationToken);
+
+                using (var page = engine.Process(bitmap))
                 {
-                    using (var bitmap = new Bitmap(image))
-                    {
-                        using (var page = _engine.Process(bitmap))
-                        {
-                            return page.GetText();
-                        }
-                    }
+                    return page.GetText();
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("Error: " + ex.Message);
+                return string.Empty;
+            }
+            finally
+            {
+                if (engine != null)
                 {
-                    // Handle exceptions
-                    _logger.LogDebug("Error: " + ex.Message);
-                    return string.Empty;
+                    _engines.Enqueue(engine);
                 }
             }
         }
 
-        public string ExtractTextFromImage(Bitmap bitmap)
+        public async Task<string> ExtractTextFromImageAsync(Image image, CancellationToken cancellationToken = default)
         {
-            lock (_lockObj) // Only one thread can enter this block at a time
+            using (var bitmap = new Bitmap(image))
             {
-                try
-                {
-                    using (var page = _engine.Process(bitmap))
-                    {
-                        return page.GetText();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Handle exceptions
-                    _logger.LogDebug("Error: " + ex.Message);
-                    return string.Empty;
-                }
+                return await ProcessBitmapAsync(bitmap, cancellationToken);
             }
         }
 
-        public string ExtractTextFromImage(string filepath)
+        public async Task<string> ExtractTextFromImageAsync(Bitmap bitmap, CancellationToken cancellationToken = default)
         {
-            lock (_lockObj) // Only one thread can enter this block at a time
+            return await ProcessBitmapAsync(bitmap, cancellationToken);
+        }
+
+        public async Task<string> ExtractTextFromImageAsync(string filepath, CancellationToken cancellationToken = default)
+        {
+            using (var bitmap = new Bitmap(filepath))
             {
-                try
-                {
-                    using (var bitmap = new Bitmap(filepath))
-                    {
-                        using (var page = _engine.Process(bitmap))
-                        {
-                            return page.GetText();
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Handle exceptions
-                    _logger.LogDebug("Error: " + ex.Message);
-                    return string.Empty;
-                }
+                return await ProcessBitmapAsync(bitmap, cancellationToken);
             }
         }
     }
+
 }

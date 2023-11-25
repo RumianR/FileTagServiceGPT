@@ -48,7 +48,7 @@ namespace OpenAIApp.FileProcessors
 
                 numberOfPages = GetNumberOfPages(tempFilePath);
 
-                extractedText = ExtractTextFromPdf(tempFilePath, numberOfPages);
+                extractedText = await ExtractTextFromPdf(tempFilePath, numberOfPages);
 
                 thumbnailBase64 = GetBase64Thumbnail(tempFilePath, 50);
             }
@@ -71,7 +71,7 @@ namespace OpenAIApp.FileProcessors
             };
         }
 
-        private string ExtractTextFromPdf(string tempFilePath, int totalNumberOfPages)
+        private async Task<string> ExtractTextFromPdf(string tempFilePath, int totalNumberOfPages)
         {
             var text = string.Empty;
             var dpi = 300;
@@ -86,7 +86,7 @@ namespace OpenAIApp.FileProcessors
                     continue;
                 }
 
-                var pageText = _tesseractManager.ExtractTextFromImage(image);
+                var pageText = await _tesseractManager.ExtractTextFromImageAsync(image);
 
                 if (string.IsNullOrWhiteSpace(pageText))
                 {

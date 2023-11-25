@@ -180,6 +180,7 @@ namespace OpenAIApp.Services.FileProcessing
                 return;
             }
 
+            _logger.LogDebug($"Sending OpenAi request for file: {fileId}");
             var tagsJson = await _openAiHelper.GetTags(fileText);
 
             _logger.LogDebug(
