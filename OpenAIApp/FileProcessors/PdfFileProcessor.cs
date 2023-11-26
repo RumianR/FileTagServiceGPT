@@ -15,6 +15,9 @@ namespace OpenAIApp.FileProcessors
 
         public ITesseractManager _tesseractManager;
 
+        private readonly int _maxCharacters = 2500 * 4;  // 4 characters per token
+
+
         public PdfFileProcessor(ILogger<PdfFileProcessor> logger, ITesseractManager tesseractManager)
         {
             _logger = logger;
@@ -78,6 +81,11 @@ namespace OpenAIApp.FileProcessors
 
             for (var pageIndex = 1; pageIndex <= totalNumberOfPages; pageIndex++)
             {
+                if (text.Length > _maxCharacters)
+                {
+                    break;
+                }
+
                 var image = GetImage(tempFilePath, dpi, pageIndex);
 
                 if (image == null)
