@@ -31,10 +31,11 @@ namespace OpenAIApp.Services.FileProcessing
             PollingConfig.FileProcessingServicePollingIntervalInSeconds;
         private readonly string _baseUrl = "https://nxoavkcgtuzdxbfamjjh.supabase.co/storage/v1/object/public/";
 
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10); // Allows 5 concurrent tasks
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10); // Allows 10 concurrent tasks
 
         private readonly PdfFileProcessor _pdfFileProcessor;
         private readonly ImageFileProcessor _imageFileProcessor;
+        private readonly int _maxQueueSize = 10;
 
 
         public FileProcessingService(
@@ -57,12 +58,40 @@ namespace OpenAIApp.Services.FileProcessing
             _fileRepo = fileRepo;
             _tagRepo = tagRepo;
             _fileTagRepo = fileTagRepo;
+            _maxQueueSize = GetMaxQueueSize();
 
             _timer = new Timer(OnTimerProcessFiles);
         }
 
+        private int GetMaxQueueSize()
+        {
+            var maxQueueSize = 10;
+
+            var maxQueueSizeEnv = Environment.GetEnvironmentVariable("MAX_QUEUE_SIZE");
+
+            if (!string.IsNullOrWhiteSpace(maxQueueSizeEnv))
+            {
+                try
+                {
+                    maxQueueSize = int.Parse(maxQueueSizeEnv);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug($"Could not parse MAX_QUEUE_SIZE env variable: {ex.Message}");
+                }
+            }
+
+            return maxQueueSize;
+        }
+
         public async void AddNewFileToQueue(string fileId)
         {
+            if (_fileProcessingQueue.Count >= _maxQueueSize)
+            {
+                _logger.LogDebug($"File processing queue is full, cannot add file: {fileId}");
+                return;
+            }
+
             FileModel file = null;
 
             try

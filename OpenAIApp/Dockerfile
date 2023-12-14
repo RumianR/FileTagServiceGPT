@@ -17,7 +17,6 @@ RUN apt-get update -y && apt-get install tesseract-ocr -y
 RUN ls -la /usr/lib/x86_64-linux-gnu
 
 
-
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["OpenAIApp/OpenAIApp.csproj", "OpenAIApp/"]
