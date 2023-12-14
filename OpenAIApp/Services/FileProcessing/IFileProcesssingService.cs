@@ -2,6 +2,6 @@
 {
     public interface IFileProcesssingService : IService
     {
-        public void AddNewFileToQueue(string fileId);
+        public Task AddNewFileToQueue(string fileId);
     }
 }

@@ -31,11 +31,11 @@ namespace OpenAIApp.Services.FileProcessing
             PollingConfig.FileProcessingServicePollingIntervalInSeconds;
         private readonly string _baseUrl = "https://nxoavkcgtuzdxbfamjjh.supabase.co/storage/v1/object/public/";
 
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(10, 10); // Allows 10 concurrent tasks
+        private readonly SemaphoreSlim _semaphore; // Allows X concurrent tasks
 
         private readonly PdfFileProcessor _pdfFileProcessor;
         private readonly ImageFileProcessor _imageFileProcessor;
-        private readonly int _maxQueueSize = 10;
+        private int _maxQueueSize;
 
 
         public FileProcessingService(
@@ -59,6 +59,7 @@ namespace OpenAIApp.Services.FileProcessing
             _tagRepo = tagRepo;
             _fileTagRepo = fileTagRepo;
             _maxQueueSize = GetMaxQueueSize();
+            _semaphore = new SemaphoreSlim(_maxQueueSize, _maxQueueSize);
 
             _timer = new Timer(OnTimerProcessFiles);
         }
@@ -77,15 +78,20 @@ namespace OpenAIApp.Services.FileProcessing
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogDebug($"Could not parse MAX_QUEUE_SIZE env variable: {ex.Message}");
+                    _logger.LogDebug($"Could not parse MAX_QUEUESIZE env variable: {ex.Message}");
                 }
             }
 
+            _logger.LogDebug($"Maximum number of items that can be queued: {maxQueueSize}");
             return maxQueueSize;
         }
 
-        public async void AddNewFileToQueue(string fileId)
+        public async Task AddNewFileToQueue(string fileId)
         {
+            // log the max queue size
+            _logger.LogDebug($"Maximum number of items that can be queued: {_maxQueueSize}");
+            // log the number of items in queue
+            _logger.LogDebug($"Number of items in queue: {_fileProcessingQueue.Count}");
             if (_fileProcessingQueue.Count >= _maxQueueSize)
             {
                 _logger.LogDebug($"File processing queue is full, cannot add file: {fileId}");

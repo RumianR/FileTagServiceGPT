@@ -54,7 +54,7 @@ namespace OpenAIApp.Services.Jobs
 
             foreach (var file in filesToProcess)
             {
-                _fileProcessingService.AddNewFileToQueue(file.Id.ToString());
+                await _fileProcessingService.AddNewFileToQueue(file.Id.ToString());
             }
 
             _timer.Change(
