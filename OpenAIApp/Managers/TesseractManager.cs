@@ -1,11 +1,5 @@
 ﻿using OpenAIApp.Concurrency;
-using System;
-using System.Collections.Concurrent;
-using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
 using Tesseract;
-using Image = System.Drawing.Image;
 
 namespace OpenAIApp.Managers
 {
@@ -27,14 +21,15 @@ namespace OpenAIApp.Managers
             }
         }
 
-        private async Task<string> ProcessBitmapAsync(Bitmap bitmap, CancellationToken cancellationToken)
+        private async Task<string> ProcessImageAsync(byte[] image, CancellationToken cancellationToken)
         {
             TesseractEngine engine = null;
             try
             {
                 engine = await _engines.DequeueAsync(cancellationToken);
 
-                using (var page = engine.Process(bitmap))
+
+                using (var page = engine.Process(Pix.LoadFromMemory(image)))
                 {
                     return page.GetText();
                 }
@@ -53,26 +48,23 @@ namespace OpenAIApp.Managers
             }
         }
 
-        public async Task<string> ExtractTextFromImageAsync(Image image, CancellationToken cancellationToken = default)
+        public async Task<string> ExtractTextFromImageAsync(byte[] image, CancellationToken cancellationToken = default)
         {
-            using (var bitmap = new Bitmap(image))
-            {
-                return await ProcessBitmapAsync(bitmap, cancellationToken);
-            }
+            return await ProcessImageAsync(image, cancellationToken);
         }
 
-        public async Task<string> ExtractTextFromImageAsync(Bitmap bitmap, CancellationToken cancellationToken = default)
-        {
-            return await ProcessBitmapAsync(bitmap, cancellationToken);
-        }
+        //public async Task<string> ExtractTextFromImageAsync(Bitmap bitmap, CancellationToken cancellationToken = default)
+        //{
+        //    return await ProcessBitmapAsync(bitmap, cancellationToken);
+        //}
 
-        public async Task<string> ExtractTextFromImageAsync(string filepath, CancellationToken cancellationToken = default)
-        {
-            using (var bitmap = new Bitmap(filepath))
-            {
-                return await ProcessBitmapAsync(bitmap, cancellationToken);
-            }
-        }
+        //public async Task<string> ExtractTextFromImageAsync(string filepath, CancellationToken cancellationToken = default)
+        //{
+        //    using (var bitmap = new Bitmap(filepath))
+        //    {
+        //        return await ProcessBitmapAsync(bitmap, cancellationToken);
+        //    }
+        //}
     }
 
 }

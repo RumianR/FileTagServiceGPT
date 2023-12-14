@@ -1,11 +1,7 @@
-﻿using Ghostscript.NET.Rasterizer;
-using ImageMagick;
-using iTextSharp.text.pdf;
+﻿using ImageMagick;
 using OpenAIApp.Common;
 using OpenAIApp.Managers;
-using System.Drawing;
-using System.Drawing.Imaging;
-using Image = System.Drawing.Image;
+
 
 
 namespace OpenAIApp.FileProcessors.ImageProcessing
@@ -47,11 +43,10 @@ namespace OpenAIApp.FileProcessors.ImageProcessing
 
                 // Extract text from the PDF file
 
-                var convertedStream = GetConvertedStream(tempFilePath);
+                var image = GetImage(tempFilePath);
 
-                extractedText = await ExtractTextFromImage(convertedStream);
-                thumbnailBase64 = convertedStream.Base64Png;
-
+                extractedText = await ExtractTextFromImage(image.ToByteArray());
+                thumbnailBase64 = ReduceImageSize(image, 0.40).ToBase64();
             }
             finally
             {
@@ -72,11 +67,11 @@ namespace OpenAIApp.FileProcessors.ImageProcessing
             };
         }
 
-        private Task<string> ExtractTextFromImage(ConvertedStream convertedStream)
+        private Task<string> ExtractTextFromImage(byte[] image)
         {
             try
             {
-                return _tesseractManager.ExtractTextFromImageAsync(convertedStream.Bitmap);
+                return _tesseractManager.ExtractTextFromImageAsync(image);
 
             }
             catch (Exception ex)
@@ -87,12 +82,14 @@ namespace OpenAIApp.FileProcessors.ImageProcessing
 
         }
 
-        private ConvertedStream GetConvertedStream(string tempFilePath)
+        private MagickImage GetImage(string tempFilePath)
         {
             try
             {
-                using var magickImage = new MagickImage(tempFilePath);
-                return ConvertMagickImageToBitmap(magickImage);
+                var image = new MagickImage(tempFilePath);
+                image.Format = MagickFormat.Png;
+
+                return image;
             }
             catch (Exception ex)
             {
@@ -121,39 +118,6 @@ namespace OpenAIApp.FileProcessors.ImageProcessing
             }
 
             return image;
-        }
-
-        public ConvertedStream ConvertMagickImageToBitmap(MagickImage magickImage)
-        {
-            var convertedStream = new ConvertedStream();
-
-            using (var memoryStream = new MemoryStream())
-            {
-                // Save the MagickImage to MemoryStream in a Bitmap-compatible format (e.g., PNG
-                magickImage.Format = MagickFormat.Png;
-                magickImage.Write(memoryStream);
-                memoryStream.Position = 0;
-
-                // Create a Bitmap from the MemoryStream
-                convertedStream.Bitmap = new Bitmap(memoryStream);
-            }
-
-            using (var memoryStream = new MemoryStream())
-            {
-                // Save the MagickImage to MemoryStream in a Bitmap-compatible format (e.g., PNG
-                magickImage = ReduceImageSize(magickImage, 0.40);
-                magickImage.Format = MagickFormat.Png;
-                magickImage.Write(memoryStream);
-                memoryStream.Position = 0;
-
-                // Create a Bitmap from the MemoryStream
-
-                // Convert the MemoryStream to a byte array
-                byte[] imageBytes = memoryStream.ToArray();
-                convertedStream.Base64Png = Convert.ToBase64String(imageBytes);
-            }
-
-            return convertedStream;
         }
 
     }

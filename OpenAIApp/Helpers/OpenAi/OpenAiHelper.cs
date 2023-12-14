@@ -9,6 +9,7 @@ namespace OpenAIApp.Helpers.OpenAi
     {
         private readonly OpenAiConfig _openAiConfig;
         private readonly OpenAI_API.OpenAIAPI _api;
+        private readonly ILogger<OpenAiHelper> _logger;
 
 
 
@@ -20,11 +21,12 @@ namespace OpenAIApp.Helpers.OpenAi
             + "to associate this document in a bin."
             + "Here is the document text: ";
 
-        public OpenAiHelper(OpenAiConfig openAiConfig)
+        public OpenAiHelper(OpenAiConfig openAiConfig, ILogger<OpenAiHelper> logger)
         {
             _openAiConfig = openAiConfig;
             _api = new OpenAI_API.OpenAIAPI(_openAiConfig.Key);
             _api.HttpClientFactory = new CustomHttpClientFactory();
+            _logger = logger;
         }
 
         public async Task<string> GetTags(string text)

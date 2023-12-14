@@ -4,7 +4,7 @@
     {
         public OpenAiConfig()
         {
-            Key = Environment.GetEnvironmentVariable("OpenAI_KEY");
+            Key = Environment.GetEnvironmentVariable("OPENAI_KEY");
         }
 
         public string Key { get; } = string.Empty;
