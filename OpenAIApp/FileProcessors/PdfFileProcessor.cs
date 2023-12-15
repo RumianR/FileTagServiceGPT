@@ -47,11 +47,12 @@ namespace OpenAIApp.FileProcessors
 
                 // Extract text from the PDF file
 
-                numberOfPages = GetNumberOfPages(tempFilePath);
+                //numberOfPages = GetNumberOfPages(tempFilePath);
 
-                extractedText = await ExtractTextFromPdf(tempFilePath, numberOfPages, fileId);
+                var images = GetImages(tempFilePath, 100, 1);
+                extractedText = await ExtractTextFromPdf(images, fileId);
 
-                thumbnailBase64 = GetBase64Thumbnail(tempFilePath, 50);
+                thumbnailBase64 = GetBase64Thumbnail(images);
             }
             finally
             {
@@ -72,12 +73,9 @@ namespace OpenAIApp.FileProcessors
             };
         }
 
-        private async Task<string> ExtractTextFromPdf(string tempFilePath, int totalNumberOfPages, Guid fileId)
+        private async Task<string> ExtractTextFromPdf(MagickImageCollection images, Guid fileId)
         {
             var text = string.Empty;
-            var dpi = 300;
-
-            var images = GetImages(tempFilePath, dpi, totalNumberOfPages);
 
             for (var pageIndex = 0; pageIndex < images.Count; pageIndex++)
             {
@@ -129,12 +127,10 @@ namespace OpenAIApp.FileProcessors
 
         }
 
-        public string GetBase64Thumbnail(string pdfPath, int dpi)
+        public string GetBase64Thumbnail(MagickImageCollection images)
         {
             try
             {
-                var images = GetImages(pdfPath, dpi, 1);
-
                 var firstImage = images.First();
 
                 var reducedImage = ReduceImageSize(new MagickImage(firstImage), 0.40);
@@ -177,7 +173,7 @@ namespace OpenAIApp.FileProcessors
                 // Settings the density to 300 dpi will create an image with a better quality
                 var settings = new MagickReadSettings
                 {
-                    Density = new Density(300, 300)
+                    Density = new Density(dpi, dpi)
                 };
 
                 var images = new MagickImageCollection();
@@ -198,5 +194,6 @@ namespace OpenAIApp.FileProcessors
                 return new MagickImageCollection();
             }
         }
+
     }
 }
